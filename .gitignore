@@ -1,0 +1,42 @@
+Python
+
+pycache/
+*.py[cod]
+*.pyd
+
+Virtual environment
+
+.venv/
+venv/
+env/
+
+Secrets and environment variables
+
+.env
+.env.*
+!.env.example
+
+Local database and user data
+
+data/.db
+data/.sqlite
+data/*.sqlite3
+*.db-shm
+*.db-wal
+
+Logs and temporary files
+
+*.log
+temp/
+tmp/
+
+IDE
+
+.vscode/
+.idea/
+
+Build artifacts
+
+build/
+dist/
+*.spec
