@@ -2,7 +2,7 @@ from pathlib import Path
 from io import BytesIO
 import csv
 
-import fitz
+import pymupdf
 from docx import Document as WordDocument
 from openpyxl import load_workbook
 from pptx import Presentation
@@ -20,19 +20,37 @@ def extract_text(file_name, file_bytes):
     try:
         # PDF
         if extension == ".pdf":
-            with fitz.open(stream=file_bytes, filetype="pdf") as pdf:
+            with pymupdf.open(stream=file_bytes, filetype="pdf") as pdf:
                 text = "\n".join(page.get_text() for page in pdf)
-                return text, len(pdf.pages)
+                return text, pdf.page_count
 
         # Word
         elif extension == ".docx":
             document = WordDocument(BytesIO(file_bytes))
-            text = "\n".join(
-                paragraph.text
+            parts = [
+                paragraph.text.strip()
                 for paragraph in document.paragraphs
                 if paragraph.text.strip()
-            )
-            return text, 0
+            ]
+
+            for table_number, table in enumerate(document.tables, start=1):
+                parts.append(f"جدول {table_number}")
+
+                for row in table.rows:
+                    cells = []
+                    seen = set()
+
+                    for cell in row.cells:
+                        cell_text = cell.text.strip()
+
+                        if cell_text and cell_text not in seen:
+                            seen.add(cell_text)
+                            cells.append(cell_text)
+
+                    if cells:
+                        parts.append(" | ".join(cells))
+
+            return "\n".join(parts), 0
 
         # Excel
         elif extension == ".xlsx":
@@ -74,6 +92,12 @@ def extract_text(file_name, file_bytes):
                 for shape in slide.shapes:
                     if shape.has_text_frame and shape.text.strip():
                         parts.append(shape.text)
+
+                if slide.has_notes_slide:
+                    notes = slide.notes_slide.notes_text_frame.text.strip()
+
+                    if notes:
+                        parts.append(notes)
 
             return "\n".join(parts), len(presentation.slides)
 

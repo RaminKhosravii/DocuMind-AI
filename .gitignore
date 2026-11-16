@@ -18,8 +18,8 @@ Secrets and environment variables
 
 Local database and user data
 
-data/.db
-data/.sqlite
+data/*.db
+data/*.sqlite
 data/*.sqlite3
 *.db-shm
 *.db-wal
@@ -40,3 +40,14 @@ Build artifacts
 build/
 dist/
 *.spec
+
+
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.streamlit/secrets.toml
+*.db
+*.sqlite
+*.sqlite3
+.DS_Store

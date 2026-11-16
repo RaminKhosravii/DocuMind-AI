@@ -74,6 +74,11 @@ def initialize_database():
                 ADD COLUMN user_id INTEGER REFERENCES users(id)
             """)
 
+        connection.execute("""
+            CREATE INDEX IF NOT EXISTS idx_documents_user_id
+            ON documents(user_id)
+        """)
+
 
 def hash_password(password, salt):
     return hashlib.pbkdf2_hmac(
@@ -141,20 +146,63 @@ def authenticate_user(username, password):
 
 
 def get_documents(user_id=None):
+    columns = "id, filename, page_count, created_at, file_type, file_size"
+
     with get_connection() as connection:
         if user_id is None:
-            return connection.execute("""
-                SELECT id, filename, page_count, created_at
+            return connection.execute(f"""
+                SELECT {columns}
                 FROM documents
                 ORDER BY id DESC
             """).fetchall()
 
-        return connection.execute("""
-            SELECT id, filename, page_count, created_at
+        return connection.execute(f"""
+            SELECT {columns}
             FROM documents
             WHERE user_id = ?
             ORDER BY id DESC
         """, (user_id,)).fetchall()
+
+
+def get_document_contents(user_id, document_id=None):
+    """متن سندها را بدون فایل اصلی برمی‌گرداند."""
+
+    with get_connection() as connection:
+        if document_id is None:
+            return connection.execute("""
+                SELECT id, filename, content
+                FROM documents
+                WHERE user_id = ?
+                ORDER BY id DESC
+            """, (user_id,)).fetchall()
+
+        return connection.execute("""
+            SELECT id, filename, content
+            FROM documents
+            WHERE id = ? AND user_id = ?
+        """, (document_id, user_id)).fetchall()
+
+
+def count_readable_documents(user_id, document_id=None):
+    with get_connection() as connection:
+        if document_id is None:
+            row = connection.execute("""
+                SELECT COUNT(*) AS total
+                FROM documents
+                WHERE user_id = ?
+                  AND content IS NOT NULL
+                  AND TRIM(content) != ''
+            """, (user_id,)).fetchone()
+        else:
+            row = connection.execute("""
+                SELECT COUNT(*) AS total
+                FROM documents
+                WHERE id = ? AND user_id = ?
+                  AND content IS NOT NULL
+                  AND TRIM(content) != ''
+            """, (document_id, user_id)).fetchone()
+
+    return row["total"]
 
 
 def get_document(document_id, user_id=None):
@@ -220,27 +268,43 @@ def delete_document(document_id, user_id=None):
             """, (document_id, user_id))
 
 
+def like_pattern(query):
+    """عبارت جست‌وجو را برای LIKE امن می‌کند تا % و _ عادی بمانند."""
+
+    escaped = (
+        query.replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+    )
+    return f"%{escaped}%"
+
+
 def search_documents(query, user_id=None):
     query = query.strip()
 
     if not query:
         return []
 
-    pattern = f"%{query}%"
+    pattern = like_pattern(query)
+    columns = "id, filename, page_count, created_at, file_type, file_size"
 
     with get_connection() as connection:
         if user_id is None:
-            return connection.execute("""
-                SELECT id, filename, content, page_count, created_at
+            return connection.execute(f"""
+                SELECT {columns}
                 FROM documents
-                WHERE content LIKE ? OR filename LIKE ?
+                WHERE content LIKE ? ESCAPE '\\'
+                   OR filename LIKE ? ESCAPE '\\'
                 ORDER BY id DESC
             """, (pattern, pattern)).fetchall()
 
-        return connection.execute("""
-            SELECT id, filename, content, page_count, created_at
+        return connection.execute(f"""
+            SELECT {columns}
             FROM documents
             WHERE user_id = ?
-              AND (content LIKE ? OR filename LIKE ?)
+              AND (
+                    content LIKE ? ESCAPE '\\'
+                    OR filename LIKE ? ESCAPE '\\'
+                  )
             ORDER BY id DESC
         """, (user_id, pattern, pattern)).fetchall()
