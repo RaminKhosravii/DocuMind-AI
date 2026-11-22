@@ -137,6 +137,42 @@ DocuMind-AI/
 - Keep your local database and backups outside version control.
 - If sensitive data was ever committed to a public repository, deleting the file in a later commit does **not** remove it from Git history. Treat it as exposed and follow GitHub's guidance for sensitive data removal.
 
+
+## Windows desktop installer
+
+DocuMind AI includes a Windows desktop packaging target. The installed program opens in its own application window using Microsoft Edge WebView2; users do not need to open a browser manually. The setup package includes the Python application and its runtime libraries, but **does not bundle Ollama or the language models**.
+
+### Requirements on the target PC
+
+- Windows 10 or Windows 11, 64-bit.
+- Microsoft Edge WebView2 Runtime (install the Evergreen Runtime if it is missing).
+- [Ollama for Windows](https://ollama.com/download/windows).
+- Run these commands once after installing Ollama:
+
+  ```powershell
+  ollama pull qwen3:1.7b
+  ollama pull nomic-embed-text
+  ```
+
+The installer creates a Start menu shortcut and optionally a desktop shortcut. The local database is stored in `%LOCALAPPDATA%\DocuMind AI\data`, outside Program Files, so it remains writable for standard Windows users and is preserved when the application is upgraded.
+
+### Build the installer
+
+Build on Windows 10/11 x64 with Python 3.11 and Inno Setup 6 installed:
+
+```powershell
+python -m pip install -r requirements.txt -r requirements-build.txt
+.\build_windows.bat
+```
+
+PyInstaller writes the application bundle to `dist\DocuMindAI`; Inno Setup writes the setup executable to `installer\output`.
+
+### Build using GitHub Actions
+
+Open **Actions → Build Windows installer → Run workflow**. The workflow runs the unit tests, builds the Windows application and uploads the installer as an artifact. Creating and pushing a version tag such as `v0.1.0` also triggers the workflow.
+
+> The Windows installer must be built and smoke-tested on Windows. Unit tests passing on another operating system do not prove that the installer works on Windows 10/11. Test installation, first launch, Ollama connectivity, upgrade, and uninstall before publishing a public release.
+
 ## Roadmap
 
 - [x] Local document library and SQLite storage
