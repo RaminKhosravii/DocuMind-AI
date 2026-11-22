@@ -9,7 +9,9 @@ import requests
 # 1. CONFIGURATION
 # ==================================================
 
-OLLAMA_BASE_URL = "http://localhost:11434"
+OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+OLLAMA_SESSION = requests.Session()
+OLLAMA_SESSION.trust_env = False
 
 CHAT_MODEL = "qwen3:1.7b"
 EMBEDDING_MODEL = "nomic-embed-text"
@@ -152,7 +154,7 @@ def get_embeddings(texts):
             start:start + EMBEDDING_BATCH_SIZE
         ]
 
-        response = requests.post(
+        response = OLLAMA_SESSION.post(
             f"{OLLAMA_BASE_URL}/api/embed",
             json={
                 "model": EMBEDDING_MODEL,
@@ -613,7 +615,7 @@ def stream_answer(question, chunks, history=None):
     )
 
     try:
-        with requests.post(
+        with OLLAMA_SESSION.post(
             f"{OLLAMA_BASE_URL}/api/chat",
             json={
                 "model": CHAT_MODEL,
