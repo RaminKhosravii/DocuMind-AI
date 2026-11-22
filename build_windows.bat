@@ -53,7 +53,7 @@ if not exist "%ISCC%" (
   exit /b 1
 )
 
-"%ISCC%" /DAppVersion=0.1.2 installer\DocuMindAI.iss
+"%ISCC%" /DAppVersion=0.1.3 installer\DocuMindAI.iss
 if errorlevel 1 exit /b 1
 
 echo Build completed. See installer\output\
