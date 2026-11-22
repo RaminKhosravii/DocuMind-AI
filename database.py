@@ -1,21 +1,44 @@
 import sqlite3
 import hashlib
 import secrets
+import os
+import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
+
+
+def _resolve_data_dir():
+    """Use a writable per-user folder for installed Windows builds."""
+    configured = os.getenv("DOCUMIND_DATA_DIR")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    if getattr(sys, "frozen", False):
+        local_app_data = Path(os.getenv("LOCALAPPDATA", Path.home()))
+        return local_app_data / "DocuMind AI" / "data"
+    return BASE_DIR / "data"
+
+
+DATA_DIR = _resolve_data_dir()
 DB_PATH = DATA_DIR / "documind.db"
 
 
+@contextmanager
 def get_connection():
+    """Commit/rollback and always close the SQLite connection."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-    connection = sqlite3.connect(DB_PATH)
+    connection = sqlite3.connect(DB_PATH, timeout=30)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
-
-    return connection
+    try:
+        yield connection
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 def initialize_database():
