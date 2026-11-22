@@ -7,7 +7,7 @@
 #define AppExeName "DocuMindAI.exe"
 
 [Setup]
-AppId={{B8C01D5C-9D55-4B2A-A1D2-6A4D8E12A901}
+AppId={{B8C01D5C-9D55-4B2A-A1D2-6A4D8E12A901}}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
