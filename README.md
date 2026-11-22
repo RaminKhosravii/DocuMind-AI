@@ -147,7 +147,7 @@ DocuMind AI includes a Windows desktop packaging target. The installed program o
 
 ### Requirements on the target PC
 
-- Windows 10 or Windows 11, 64-bit.
+- Windows 10 version 22H2 or Windows 11, 64-bit (Ollama's current Windows requirement).
 - Microsoft Edge WebView2 Runtime (install the Evergreen Runtime if it is missing).
 - [Ollama for Windows](https://ollama.com/download/windows).
 - Run these commands once after installing Ollama:
