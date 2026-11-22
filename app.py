@@ -192,7 +192,7 @@ def show_auth_page():
                 key="register_username",
             )
             new_password = st.text_input(
-                "رمز عبور جدید (حداقل ۸ کاراکتر)",
+                "رمز عبور جدید (حداقل ۱۲ کاراکتر)",
                 type="password",
                 key="register_password",
             )
