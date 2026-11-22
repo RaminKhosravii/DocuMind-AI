@@ -64,8 +64,12 @@ def run_streamlit(port: int, app_dir: Path) -> None:
     if not app_file.is_file():
         raise FileNotFoundError(f"app.py is missing from packaged application: {app_file}")
 
+    # A frozen PyInstaller build must never inherit Streamlit's source/dev mode.
+    # In development mode Streamlit rejects an explicitly selected server.port.
+    os.environ["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
     sys.argv = [
         "streamlit", "run", str(app_file),
+        "--global.developmentMode=false",
         "--server.headless=true",
         "--server.enableCORS=true",
         "--server.enableXsrfProtection=true",
