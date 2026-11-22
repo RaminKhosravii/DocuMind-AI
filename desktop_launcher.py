@@ -1,11 +1,17 @@
-"""Windows desktop launcher with persistent startup diagnostics."""
+"""Windows desktop launcher with an isolated Streamlit server process.
+
+Streamlit installs OS signal handlers during CLI startup. It must therefore
+run on the main thread of its own process; running the CLI in a Python worker
+thread raises "signal only works in main thread". The desktop GUI and the
+Streamlit server are isolated into separate processes to avoid that conflict.
+"""
 from __future__ import annotations
 
 import logging
+import multiprocessing
 import os
 import socket
 import sys
-import threading
 import time
 import traceback
 from pathlib import Path
@@ -31,21 +37,17 @@ def configure_logging() -> Path:
     logging.basicConfig(
         filename=str(log_path),
         level=logging.INFO,
-        format="%(asctime)s %(levelname)s [%(threadName)s] %(message)s",
+        format="%(asctime)s %(levelname)s [%(processName)s] %(message)s",
         encoding="utf-8",
         force=True,
     )
-
-    def thread_exception_hook(args):
-        logging.error(
-            "Unhandled exception in thread %s",
-            args.thread.name if args.thread else "<unknown>",
-            exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
-        )
-
-    threading.excepthook = thread_exception_hook
     logging.info("========== DocuMind AI starting ==========")
-    logging.info("Python=%s frozen=%s executable=%s", sys.version, getattr(sys, "frozen", False), sys.executable)
+    logging.info(
+        "Python=%s frozen=%s executable=%s",
+        sys.version,
+        getattr(sys, "frozen", False),
+        sys.executable,
+    )
     return log_path
 
 
@@ -55,44 +57,72 @@ def choose_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def run_streamlit(port: int, app_dir: Path) -> None:
-    os.chdir(app_dir)
-    if str(app_dir) not in sys.path:
-        sys.path.insert(0, str(app_dir))
+def run_streamlit(port: int, app_dir: Path, log_path: Path) -> None:
+    """Child-process entry point. Streamlit CLI runs on this process's main thread."""
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_handle = open(log_path, "a", encoding="utf-8", buffering=1)
+    sys.stdout = log_handle
+    sys.stderr = log_handle
+    logging.basicConfig(
+        filename=str(log_path),
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s [%(processName)s] %(message)s",
+        encoding="utf-8",
+        force=True,
+    )
+    try:
+        os.chdir(app_dir)
+        if str(app_dir) not in sys.path:
+            sys.path.insert(0, str(app_dir))
 
-    app_file = app_dir / "app.py"
-    if not app_file.is_file():
-        raise FileNotFoundError(f"app.py is missing from packaged application: {app_file}")
+        app_file = app_dir / "app.py"
+        if not app_file.is_file():
+            raise FileNotFoundError(
+                f"app.py is missing from packaged application: {app_file}"
+            )
 
-    # A frozen PyInstaller build must never inherit Streamlit's source/dev mode.
-    # In development mode Streamlit rejects an explicitly selected server.port.
-    os.environ["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
-    sys.argv = [
-        "streamlit", "run", str(app_file),
-        "--global.developmentMode=false",
-        "--server.headless=true",
-        "--server.enableCORS=true",
-        "--server.enableXsrfProtection=true",
-        "--server.address=127.0.0.1",
-        f"--server.port={port}",
-        "--server.fileWatcherType=none",
-        "--browser.gatherUsageStats=false",
-    ]
-    logging.info("Starting Streamlit: app=%s port=%s", app_file, port)
-    from streamlit.web import cli as stcli
-    stcli.main()
-    logging.error("Streamlit CLI returned before the desktop server became ready")
+        os.environ["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
+        sys.argv = [
+            "streamlit",
+            "run",
+            str(app_file),
+            "--global.developmentMode=false",
+            "--server.headless=true",
+            "--server.enableCORS=true",
+            "--server.enableXsrfProtection=true",
+            "--server.address=127.0.0.1",
+            f"--server.port={port}",
+            "--server.fileWatcherType=none",
+            "--browser.gatherUsageStats=false",
+        ]
+        logging.info("Starting isolated Streamlit process: app=%s port=%s", app_file, port)
+        from streamlit.web import cli as stcli
+        stcli.main()
+        logging.error("Streamlit CLI returned before desktop shutdown")
+    except BaseException:
+        logging.exception("Streamlit child process failed")
+        raise
+    finally:
+        try:
+            log_handle.flush()
+            log_handle.close()
+        except Exception:
+            pass
 
 
-def wait_for_server(port: int, server_thread: threading.Thread, timeout: float = 120.0) -> bool:
+def wait_for_server(port: int, server_process: multiprocessing.Process,
+                    timeout: float = 180.0) -> bool:
     health_url = f"http://127.0.0.1:{port}/_stcore/health"
     deadline = time.monotonic() + timeout
     session = requests.Session()
     session.trust_env = False
     try:
         while time.monotonic() < deadline:
-            if not server_thread.is_alive():
-                logging.error("Streamlit thread exited before health check succeeded")
+            if not server_process.is_alive():
+                logging.error(
+                    "Streamlit child process exited before health check; exitcode=%s",
+                    server_process.exitcode,
+                )
                 return False
             try:
                 response = session.get(health_url, timeout=2)
@@ -109,6 +139,17 @@ def wait_for_server(port: int, server_thread: threading.Thread, timeout: float =
         session.close()
 
 
+def stop_server(server_process: multiprocessing.Process) -> None:
+    if server_process.is_alive():
+        logging.info("Stopping Streamlit child process")
+        server_process.terminate()
+        server_process.join(timeout=10)
+        if server_process.is_alive():
+            logging.warning("Streamlit did not stop gracefully; killing child process")
+            server_process.kill()
+            server_process.join(timeout=5)
+
+
 def main() -> int:
     log_path = configure_logging()
     app_dir = application_dir()
@@ -121,7 +162,7 @@ def main() -> int:
     os.environ["DOCUMIND_DATA_DIR"] = str(data_dir)
     os.environ["DOCUMIND_OLLAMA_URL"] = "http://127.0.0.1:11434"
 
-    # Prepare Ollama and the exact models used by ai_engine.py before starting the UI.
+    # Provision the local AI runtime before opening the UI.
     from first_run_setup import ensure_ai_runtime
     logging.info("Checking local AI runtime and required models")
     ensure_ai_runtime()
@@ -132,40 +173,52 @@ def main() -> int:
     database_module.DB_PATH = data_dir / "documind.db"
 
     port = choose_port()
-    server_thread = threading.Thread(
+    context = multiprocessing.get_context("spawn")
+    server_process = context.Process(
         target=run_streamlit,
-        args=(port, app_dir),
-        daemon=True,
+        args=(port, app_dir, log_path),
         name="DocuMind-Streamlit",
+        daemon=False,
     )
-    server_thread.start()
+    server_process.start()
+    logging.info("Started Streamlit child process pid=%s port=%s",
+                 server_process.pid, port)
 
-    if not wait_for_server(port, server_thread):
-        raise RuntimeError(
-            "DocuMind local server did not become ready. "
-            f"Detailed startup log: {log_path}"
-        )
+    try:
+        if not wait_for_server(port, server_process):
+            raise RuntimeError(
+                "DocuMind local server did not become ready. "
+                f"Detailed startup log: {log_path}; "
+                f"server exit code: {server_process.exitcode}"
+            )
 
-    icon_path = app_dir / "assets" / "documind.ico"
-    window_options = {
-        "title": "DocuMind AI",
-        "url": f"http://127.0.0.1:{port}",
-        "width": 1280,
-        "height": 820,
-        "min_size": (900, 620),
-        "background_color": "#111019",
-    }
-    if icon_path.is_file():
-        window_options["icon"] = str(icon_path)
+        icon_path = app_dir / "assets" / "documind.ico"
+        window_options = {
+            "title": "DocuMind AI",
+            "url": f"http://127.0.0.1:{port}",
+            "width": 1280,
+            "height": 820,
+            "min_size": (900, 620),
+            "background_color": "#111019",
+        }
+        if icon_path.is_file():
+            window_options["icon"] = str(icon_path)
 
-    logging.info("Opening desktop window")
-    webview.create_window(**window_options)
-    webview.start(debug=False)
-    logging.info("Desktop window closed")
-    return 0
+        logging.info("Opening desktop window")
+        webview.create_window(**window_options)
+        webview.start(debug=False)
+        logging.info("Desktop window closed")
+        return 0
+    finally:
+        stop_server(server_process)
+        if server_process.pid is not None:
+            server_process.close()
 
 
 if __name__ == "__main__":
+    # Required for PyInstaller + multiprocessing on Windows. In frozen child
+    # processes this dispatches the multiprocessing worker before main() runs.
+    multiprocessing.freeze_support()
     try:
         raise SystemExit(main())
     except Exception:
