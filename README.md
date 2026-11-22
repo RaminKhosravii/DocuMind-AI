@@ -143,7 +143,7 @@ DocuMind-AI/
 
 ## Windows desktop installer
 
-DocuMind AI includes a Windows desktop packaging target. The installed program opens in its own application window using Microsoft Edge WebView2; users do not need to open a browser manually. The setup package includes the Python application and its runtime libraries, but **does not bundle Ollama or the language models**.
+DocuMind AI includes a Windows desktop packaging target. The installed program opens in its own application window using Microsoft Edge WebView2; users do not need to open a browser manually. The setup package includes the Python application and its runtime libraries. On first launch, a guided setup checks for Ollama, downloads and verifies the official Ollama Windows installer if needed, installs it for the current user, starts its local API, and downloads the required `qwen3:1.7b` and `nomic-embed-text` models with progress feedback. Python and VS Code are not required on the target PC.
 
 ### Requirements on the target PC
 
