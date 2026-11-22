@@ -151,6 +151,7 @@ def hash_password(password: str, salt: str) -> str:
 def initialize_database() -> None:
     # Initialize the key before touching encrypted rows.
     _aes()
+    migration_performed = False
     with get_connection() as connection:
         connection.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -202,10 +203,15 @@ def initialize_database() -> None:
                 "UPDATE documents SET content = ?, file_data = ?, encryption_version = 1 WHERE id = ?",
                 (new_content, new_file, row["id"]),
             )
-    # Reclaim legacy plaintext pages after the encryption migration.
-    with get_connection() as connection:
-        connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-        connection.execute("VACUUM")
+            migration_performed = True
+    # Reclaim legacy plaintext pages once, not on every Streamlit rerun.
+    if migration_performed:
+        cleanup = sqlite3.connect(DB_PATH, timeout=30)
+        try:
+            cleanup.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            cleanup.execute("VACUUM")
+        finally:
+            cleanup.close()
 
 
 def create_user(username: str, password: str):
