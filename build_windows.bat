@@ -19,6 +19,7 @@ pyinstaller --noconfirm --clean --windowed --onedir ^
   --collect-all openpyxl ^
   --collect-all pptx ^
   --collect-all striprtf ^
+  --collect-all cryptography ^
   --hidden-import streamlit.web.cli ^
   --hidden-import pymupdf ^
   --add-data "app.py;." ^
