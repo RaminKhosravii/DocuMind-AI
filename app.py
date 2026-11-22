@@ -92,6 +92,105 @@ h1 {{ font-size: 30px !important; font-weight: 700 !important; }}
 h2 {{ font-size: 25px !important; font-weight: 700 !important; }}
 h3 {{ font-size: 21px !important; font-weight: 700 !important; }}
 
+
+/* Responsive layout improvements */
+[data-testid="stAppViewContainer"] .main .block-container {
+    width: 100%;
+    max-width: 1240px;
+    padding-inline: clamp(0.9rem, 3vw, 2.4rem);
+    padding-top: clamp(1rem, 2.5vw, 2rem);
+    padding-bottom: 2rem;
+    box-sizing: border-box;
+}
+
+[data-testid="stMarkdownContainer"],
+[data-testid="stWidgetLabel"],
+[data-testid="stChatMessage"] {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] {
+    max-width: 100%;
+}
+
+[data-testid="stCode"],
+pre, code {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.stTextInput input,
+.stTextArea textarea,
+[data-testid="stChatInput"] textarea,
+[data-testid="stFileUploader"] {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+[data-testid="stMetric"] {
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+    [data-testid="stAppViewContainer"] .main .block-container {
+        padding-inline: 1rem;
+    }
+
+    h1 { font-size: clamp(1.55rem, 4vw, 1.9rem) !important; }
+    h2 { font-size: clamp(1.3rem, 3.5vw, 1.6rem) !important; }
+    h3 { font-size: clamp(1.1rem, 3vw, 1.35rem) !important; }
+}
+
+@media (max-width: 640px) {
+    [data-testid="stAppViewContainer"] .main .block-container {
+        padding-inline: 0.75rem;
+        padding-top: 0.75rem;
+    }
+
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+        gap: 0.65rem !important;
+    }
+
+    [data-testid="stMetric"] {
+        flex: 1 1 125px !important;
+        min-width: 0 !important;
+    }
+
+    [data-testid="stTabs"] [role="tablist"] {
+        max-width: 100%;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+
+    [data-testid="stTabs"] button[role="tab"] {
+        white-space: nowrap;
+        min-width: max-content;
+    }
+
+    [data-testid="stChatMessage"] {
+        padding-inline: 0.65rem;
+    }
+
+    [data-testid="stFileUploader"] section {
+        padding: 0.75rem !important;
+    }
+
+    .stButton button,
+    .stDownloadButton button,
+    [data-testid="stFormSubmitButton"] button {
+        max-width: 100%;
+        white-space: normal;
+    }
+
+    [data-testid="stDataFrame"],
+    [data-testid="stTable"] {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+}
+
 </style>
 """, unsafe_allow_html=True)
 
