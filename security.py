@@ -60,7 +60,7 @@ def validate_upload(filename: str, data: bytes) -> tuple[str, int]:
         except BadZipFile as error:
             raise ValueError("فایل Office خراب یا نامعتبر است.") from error
     elif extension in {".txt", ".md", ".csv", ".rtf", ".log"}:
-        if b"\\x00" in bytes(data[:8192]):
+        if bytes([0]) in bytes(data[:8192]):
             raise ValueError("فایل متنی دارای داده باینری نامعتبر است.")
     # Unknown extensions may still be stored, but are never passed to an extractor.
     return name, len(data)
