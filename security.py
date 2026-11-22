@@ -16,7 +16,7 @@ SUPPORTED_FORMATS = {".pdf", ".docx", ".xlsx", ".pptx", ".txt", ".md", ".csv", "
 def sanitize_filename(filename: str) -> str:
     """Keep a display-only basename; never trust client supplied paths."""
     name = Path(str(filename or "")).name.replace("\\", "_").replace("/", "_")
-    name = re.sub(r"[\\x00-\\x1f\\x7f]", "", name).strip(" .")
+    name = re.sub(r"[\x00-\x1f\x7f]", "", name).strip(" .")
     if not name or len(name) > 180:
         raise ValueError("نام فایل معتبر نیست یا بیش از حد طولانی است.")
     return name
