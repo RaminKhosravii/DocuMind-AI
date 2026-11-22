@@ -35,6 +35,9 @@ class UploadSecurityTests(unittest.TestCase):
         name, _ = validate_upload("report.docx", stream.getvalue())
         self.assertEqual(name, "report.docx")
 
+    def test_rejects_binary_text_file(self):
+        with self.assertRaises(ValueError):
+            validate_upload('binary.txt', b'hello' + bytes([0]) + b'world')
     def test_sanitizes_control_characters(self):
         name = sanitize_filename("report\x00.txt")
         self.assertEqual(name, "report.txt")
