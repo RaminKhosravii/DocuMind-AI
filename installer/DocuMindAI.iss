@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.1.0"
+  #define AppVersion "0.1.1"
 #endif
 
 #define AppName "DocuMind AI"
@@ -15,12 +15,13 @@ DefaultDirName={localappdata}\Programs\DocuMind AI
 DefaultGroupName={#AppName}
 OutputDir=output
 OutputBaseFilename=DocuMindAI-Setup-{#AppVersion}
+SetupIconFile=..\assets\documind.ico
+UninstallDisplayIcon={app}\DocuMindAI.exe
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64
 PrivilegesRequired=lowest
-UninstallDisplayIcon={app}\{#AppExeName}
 SetupLogging=yes
 
 [Languages]
@@ -33,8 +34,8 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 Source: "..\dist\DocuMindAI\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\DocuMind AI"; Filename: "{app}\{#AppExeName}"
-Name: "{autodesktop}\DocuMind AI"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
+Name: "{group}\DocuMind AI"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\_internal\assets\documind.ico"
+Name: "{autodesktop}\DocuMind AI"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\_internal\assets\documind.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "Launch DocuMind AI"; Flags: nowait postinstall skipifsilent
