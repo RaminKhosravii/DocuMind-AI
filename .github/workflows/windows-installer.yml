@@ -4,14 +4,12 @@ on:
   push:
     branches:
       - security/windows-local-hardening
+    tags:
+      - "v*"
   pull_request:
     branches:
       - main
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
-
 permissions:
   contents: read
 
