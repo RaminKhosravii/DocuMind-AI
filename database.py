@@ -202,6 +202,10 @@ def initialize_database() -> None:
                     "UPDATE documents SET content = ?, file_data = ? WHERE id = ?",
                     (new_content, new_file, row["id"]),
                 )
+    # Reclaim legacy plaintext pages after the encryption migration.
+    with get_connection() as connection:
+        connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        connection.execute("VACUUM")
 
 
 def create_user(username: str, password: str):
