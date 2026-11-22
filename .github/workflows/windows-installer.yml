@@ -3,6 +3,7 @@ name: Build Windows installer
 on:
   push:
     branches:
+      - feature/windows-desktop-installer
       - security/windows-local-hardening
     tags:
       - "v*"
