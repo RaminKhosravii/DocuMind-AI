@@ -191,7 +191,7 @@ def initialize_database() -> None:
             )
         """)
         # Preserve legacy unowned rows; never silently assign one user's files to another.
-        rows = connection.execute("SELECT id, content, file_data, encryption_version FROM documents").fetchall()
+        rows = connection.execute("SELECT id, content, file_data, encryption_version FROM documents WHERE encryption_version != 1").fetchall()
         for row in rows:
             if row["encryption_version"] == 1:
                 continue
