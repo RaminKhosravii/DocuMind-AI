@@ -1,6 +1,9 @@
 name: Build Windows installer
 
 on:
+  push:
+    branches:
+      - security/windows-local-hardening
   pull_request:
     branches:
       - main
