@@ -133,8 +133,11 @@ DocuMind-AI/
 ## Privacy and security
 
 - Do not commit databases, uploaded documents, credentials, API keys, or personal information.
-- Local model inference does not require sending document content to a hosted AI API in the current setup.
-- Keep your local database and backups outside version control.
+- Document text and original file bytes are encrypted at rest with AES-256-GCM; on Windows, the encryption key is protected with the current Windows user's DPAPI.
+- Passwords use salted PBKDF2-HMAC-SHA256 hashes and repeated failed logins trigger a temporary lockout.
+- Keep the database and `master.key.dpapi` together in `%LOCALAPPDATA%\\DocuMind AI\\data`; a backup missing the key cannot be restored.
+- Local encryption does not protect against malware or an attacker already running as the same Windows user. Use Windows sign-in protection and BitLocker where available.
+- Ollama communication is restricted to loopback (`127.0.0.1`) and bypasses inherited system proxy settings.
 - If sensitive data was ever committed to a public repository, deleting the file in a later commit does **not** remove it from Git history. Treat it as exposed and follow GitHub's guidance for sensitive data removal.
 
 

@@ -11,7 +11,7 @@ AppId={{B8C01D5C-9D55-4B2A-A1D2-6A4D8E12A901}}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
-DefaultDirName={autopf}\DocuMind AI
+DefaultDirName={localappdata}\Programs\DocuMind AI
 DefaultGroupName={#AppName}
 OutputDir=output
 OutputBaseFilename=DocuMindAI-Setup-{#AppVersion}
@@ -19,7 +19,7 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64
-PrivilegesRequired=admin
+PrivilegesRequired=lowest
 UninstallDisplayIcon={app}\{#AppExeName}
 SetupLogging=yes
 

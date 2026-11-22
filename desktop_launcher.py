@@ -31,6 +31,8 @@ def run_streamlit(port: int, app_dir: Path) -> None:
     sys.argv = [
         "streamlit", "run", str(app_dir / "app.py"),
         "--server.headless=true",
+        "--server.enableCORS=true",
+        "--server.enableXsrfProtection=true",
         "--server.address=127.0.0.1",
         f"--server.port={port}",
         "--server.fileWatcherType=none",
@@ -43,15 +45,20 @@ def run_streamlit(port: int, app_dir: Path) -> None:
 def wait_for_server(port: int, timeout: float = 90.0) -> bool:
     health_url = f"http://127.0.0.1:{port}/_stcore/health"
     deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        try:
-            response = requests.get(health_url, timeout=1.5)
-            if response.ok:
-                return True
-        except requests.RequestException:
-            pass
-        time.sleep(0.4)
-    return False
+    session = requests.Session()
+    session.trust_env = False
+    try:
+        while time.monotonic() < deadline:
+            try:
+                response = session.get(health_url, timeout=1.5)
+                if response.ok:
+                    return True
+            except requests.RequestException:
+                pass
+            time.sleep(0.4)
+        return False
+    finally:
+        session.close()
 
 
 def main() -> int:
