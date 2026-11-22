@@ -28,6 +28,7 @@ pyinstaller --noconfirm --clean --windowed --onedir ^
   --collect-all striprtf ^
   --collect-all cryptography ^
   --hidden-import streamlit.web.cli ^
+  --hidden-import first_run_setup ^
   --hidden-import pymupdf ^
   --add-data "app.py;." ^
   --add-data "ai_engine.py;." ^
@@ -52,7 +53,7 @@ if not exist "%ISCC%" (
   exit /b 1
 )
 
-"%ISCC%" /DAppVersion=0.1.1 installer\DocuMindAI.iss
+"%ISCC%" /DAppVersion=0.1.2 installer\DocuMindAI.iss
 if errorlevel 1 exit /b 1
 
 echo Build completed. See installer\output\
