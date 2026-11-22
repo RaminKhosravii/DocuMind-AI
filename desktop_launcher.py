@@ -117,6 +117,11 @@ def main() -> int:
     os.environ["DOCUMIND_DATA_DIR"] = str(data_dir)
     os.environ["DOCUMIND_OLLAMA_URL"] = "http://127.0.0.1:11434"
 
+    # Prepare Ollama and the exact models used by ai_engine.py before starting the UI.
+    from first_run_setup import ensure_ai_runtime
+    logging.info("Checking local AI runtime and required models")
+    ensure_ai_runtime()
+
     # Keep SQLite and its DPAPI key in the writable per-user data directory.
     import database as database_module
     database_module.DATA_DIR = data_dir
