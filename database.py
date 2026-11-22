@@ -112,8 +112,6 @@ def _decrypt_bytes(value: bytes, purpose: bytes) -> bytes:
 
 
 def _encrypt_text(value: str) -> str:
-    if value.startswith(TEXT_MARKER):
-        return value
     encrypted = _encrypt_bytes(value.encode("utf-8"), b"document-content")
     return TEXT_MARKER + base64.b64encode(encrypted[len(BLOB_MARKER):]).decode("ascii")
 
@@ -178,6 +176,7 @@ def initialize_database() -> None:
             "file_type": "TEXT",
             "file_size": "INTEGER NOT NULL DEFAULT 0",
             "user_id": "INTEGER REFERENCES users(id)",
+            "encryption_version": "INTEGER NOT NULL DEFAULT 0",
         }
         for name, kind in additions.items():
             if name not in columns:
@@ -191,17 +190,18 @@ def initialize_database() -> None:
             )
         """)
         # Preserve legacy unowned rows; never silently assign one user's files to another.
-        rows = connection.execute("SELECT id, content, file_data FROM documents").fetchall()
+        rows = connection.execute("SELECT id, content, file_data, encryption_version FROM documents").fetchall()
         for row in rows:
+            if row["encryption_version"] == 1:
+                continue
             content = row["content"] or ""
             file_data = row["file_data"]
             new_content = _encrypt_text(content)
-            new_file = _encrypt_bytes(bytes(file_data), b"document-file") if file_data and not bytes(file_data).startswith(BLOB_MARKER) else file_data
-            if new_content != content or new_file != file_data:
-                connection.execute(
-                    "UPDATE documents SET content = ?, file_data = ? WHERE id = ?",
-                    (new_content, new_file, row["id"]),
-                )
+            new_file = _encrypt_bytes(bytes(file_data), b"document-file") if file_data else None
+            connection.execute(
+                "UPDATE documents SET content = ?, file_data = ?, encryption_version = 1 WHERE id = ?",
+                (new_content, new_file, row["id"]),
+            )
     # Reclaim legacy plaintext pages after the encryption migration.
     with get_connection() as connection:
         connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
@@ -287,15 +287,15 @@ def get_document_contents(user_id, document_id=None):
     with get_connection() as connection:
         if document_id is None:
             rows = connection.execute(
-                "SELECT id, filename, content FROM documents WHERE user_id = ? ORDER BY id DESC",
+                "SELECT id, filename, content, encryption_version FROM documents WHERE user_id = ? ORDER BY id DESC",
                 (user_id,),
             ).fetchall()
         else:
             rows = connection.execute(
-                "SELECT id, filename, content FROM documents WHERE id = ? AND user_id = ?",
+                "SELECT id, filename, content, encryption_version FROM documents WHERE id = ? AND user_id = ?",
                 (document_id, user_id),
             ).fetchall()
-    return [{"id": row["id"], "filename": row["filename"], "content": _decrypt_text(row["content"])} for row in rows]
+    return [{"id": row["id"], "filename": row["filename"], "content": _decrypt_text(row["content"]) if row["encryption_version"] == 1 else (row["content"] or "")} for row in rows]
 
 
 def count_readable_documents(user_id, document_id=None):
@@ -316,9 +316,10 @@ def get_document(document_id, user_id):
     if row is None:
         return None
     result = dict(row)
-    result["content"] = _decrypt_text(result.get("content"))
-    if result.get("file_data"):
-        result["file_data"] = _decrypt_bytes(bytes(result["file_data"]), b"document-file")
+    if result.get("encryption_version") == 1:
+        result["content"] = _decrypt_text(result.get("content"))
+        if result.get("file_data"):
+            result["file_data"] = _decrypt_bytes(bytes(result["file_data"]), b"document-file")
     return result
 
 
@@ -329,8 +330,8 @@ def add_document(filename, content, user_id, page_count=0, file_data=None, file_
     encrypted_file = _encrypt_bytes(bytes(file_data), b"document-file") if file_data else None
     with get_connection() as connection:
         cursor = connection.execute("""
-            INSERT INTO documents (filename, content, page_count, user_id, file_data, file_type, file_size)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO documents (filename, content, page_count, user_id, file_data, file_type, file_size, encryption_version)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
         """, (filename, encrypted_content, page_count, user_id, encrypted_file, file_type, file_size))
         return cursor.lastrowid
 
@@ -355,12 +356,12 @@ def search_documents(query, user_id):
         return []
     with get_connection() as connection:
         rows = connection.execute(
-            "SELECT id, filename, content, page_count, created_at, file_type, file_size FROM documents WHERE user_id = ? ORDER BY id DESC",
+            "SELECT id, filename, content, page_count, created_at, file_type, file_size, encryption_version FROM documents WHERE user_id = ? ORDER BY id DESC",
             (user_id,),
         ).fetchall()
     matches = []
     for row in rows:
-        content = _decrypt_text(row["content"])
+        content = _decrypt_text(row["content"]) if row["encryption_version"] == 1 else (row["content"] or "")
         if query in row["filename"].casefold() or query in content.casefold():
             matches.append({
                 "id": row["id"],
