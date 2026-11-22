@@ -32,13 +32,16 @@ pyinstaller --noconfirm --clean --windowed --onedir ^
 
 if errorlevel 1 exit /b 1
 
+set "ISCC=ISCC.exe"
 where ISCC.exe >nul 2>nul
-if errorlevel 1 (
-  echo PyInstaller build completed. Install Inno Setup 6 to create the Setup.exe.
-  exit /b 0
+if errorlevel 1 set "ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
+
+if not exist "%ISCC%" (
+  echo ERROR: Inno Setup 6 was not found. The Windows installer cannot be created.
+  exit /b 1
 )
 
-ISCC.exe /DAppVersion=0.1.0 installer\DocuMindAI.iss
+"%ISCC%" /DAppVersion=0.1.0 installer\DocuMindAI.iss
 if errorlevel 1 exit /b 1
 
 echo Build completed. See installer\output\
