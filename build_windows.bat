@@ -3,12 +3,19 @@ setlocal
 cd /d "%~dp0"
 
 py -3.11 -m venv .build-venv
+if errorlevel 1 exit /b 1
 call .build-venv\Scripts\activate.bat
 python -m pip install --upgrade pip
+if errorlevel 1 exit /b 1
 pip install -r requirements.txt -r requirements-build.txt
+if errorlevel 1 exit /b 1
+
+python scripts\build_icon.py
+if errorlevel 1 exit /b 1
 
 pyinstaller --noconfirm --clean --windowed --onedir ^
   --name "DocuMindAI" ^
+  --icon "assets\documind.ico" ^
   --collect-all streamlit ^
   --collect-all altair ^
   --collect-all pydeck ^
@@ -45,7 +52,7 @@ if not exist "%ISCC%" (
   exit /b 1
 )
 
-"%ISCC%" /DAppVersion=0.1.0 installer\DocuMindAI.iss
+"%ISCC%" /DAppVersion=0.1.1 installer\DocuMindAI.iss
 if errorlevel 1 exit /b 1
 
 echo Build completed. See installer\output\
