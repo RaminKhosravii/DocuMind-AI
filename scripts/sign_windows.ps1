@@ -14,7 +14,8 @@ if ([string]::IsNullOrWhiteSpace($certificateBase64) -or [string]::IsNullOrWhite
 }
 
 $resolvedFile = (Resolve-Path $FilePath).Path
-$tempCertificate = Join-Path $env:RUNNER_TEMP "documind-codesign.pfx"
+$tempRoot = if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) { $env:TEMP } else { $env:RUNNER_TEMP }
+$tempCertificate = Join-Path $tempRoot "documind-codesign.pfx"
 
 try {
     [IO.File]::WriteAllBytes($tempCertificate, [Convert]::FromBase64String($certificateBase64))
