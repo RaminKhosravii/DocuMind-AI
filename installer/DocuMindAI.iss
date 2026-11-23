@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.1.3"
+  #define AppVersion "0.1.4"
 #endif
 
 #define AppName "DocuMind AI"
@@ -11,6 +11,13 @@ AppId={{B8C01D5C-9D55-4B2A-A1D2-6A4D8E12A901}}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
+AppPublisherURL=https://github.com/RaminKhosravii/DocuMind-AI
+AppSupportURL=https://github.com/RaminKhosravii/DocuMind-AI/issues
+AppUpdatesURL=https://github.com/RaminKhosravii/DocuMind-AI/releases
+VersionInfoCompany={#AppPublisher}
+VersionInfoDescription=DocuMind AI Windows Installer
+VersionInfoProductName={#AppName}
+VersionInfoProductVersion={#AppVersion}
 DefaultDirName={localappdata}\Programs\DocuMind AI
 DefaultGroupName={#AppName}
 OutputDir=output
