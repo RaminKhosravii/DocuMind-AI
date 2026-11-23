@@ -13,7 +13,7 @@ if errorlevel 1 exit /b 1
 python scripts\build_icon.py
 if errorlevel 1 exit /b 1
 
-pyinstaller --noconfirm --clean --windowed --onedir ^
+pyinstaller --noconfirm --clean --windowed --onedir --noupx ^
   --name "DocuMindAI" ^
   --icon "assets\documind.ico" ^
   --collect-all streamlit ^
@@ -40,6 +40,9 @@ pyinstaller --noconfirm --clean --windowed --onedir ^
 
 if errorlevel 1 exit /b 1
 
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sign_windows.ps1 -FilePath "dist\DocuMindAI\DocuMindAI.exe"
+if errorlevel 1 exit /b 1
+
 set "ISCC="
 if defined INNO_SETUP_COMPILER set "ISCC=%INNO_SETUP_COMPILER%"
 if not defined ISCC (
@@ -53,7 +56,10 @@ if not exist "%ISCC%" (
   exit /b 1
 )
 
-"%ISCC%" /DAppVersion=0.1.3 installer\DocuMindAI.iss
+"%ISCC%" /DAppVersion=0.1.4 installer\DocuMindAI.iss
+if errorlevel 1 exit /b 1
+
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sign_windows.ps1 -FilePath "installer\output\DocuMindAI-Setup-0.1.4.exe"
 if errorlevel 1 exit /b 1
 
 echo Build completed. See installer\output\
