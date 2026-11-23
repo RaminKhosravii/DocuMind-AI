@@ -64,11 +64,25 @@ jobs:
           Write-Host "Using Inno Setup compiler: $($compiler.FullName)"
 
       - name: Build desktop application and installer
+        env:
+          DOCUMIND_SIGNING_CERT_BASE64: ${{ secrets.DOCUMIND_SIGNING_CERT_BASE64 }}
+          DOCUMIND_SIGNING_CERT_PASSWORD: ${{ secrets.DOCUMIND_SIGNING_CERT_PASSWORD }}
         run: .\build_windows.bat
+
+      - name: Generate SHA-256 checksum
+        shell: pwsh
+        run: |
+          $installer = "installer/output/DocuMindAI-Setup-0.1.4.exe"
+          if (-not (Test-Path $installer)) { throw "Installer output is missing." }
+          $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  DocuMindAI-Setup-0.1.4.exe" | Out-File "installer/output/SHA256SUMS.txt" -Encoding ascii
+          Write-Host "Installer SHA-256: $hash"
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DocuMindAI-Windows-Installer
-          path: installer/output/*.exe
+          name: DocuMindAI-Windows-Installer-0.1.4
+          path: |
+            installer/output/DocuMindAI-Setup-0.1.4.exe
+            installer/output/SHA256SUMS.txt
           if-no-files-found: error
