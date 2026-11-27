@@ -176,7 +176,7 @@ After a version tag is published and the Windows workflow succeeds, open the rep
 
 ### Build using GitHub Actions
 
-Open **Actions → Build Windows installer → Run workflow** to create a downloadable workflow artifact for testing. Workflow artifacts are temporary and may require signing in to GitHub. To publish a permanent public download, push a version tag beginning with `v` (for example, `v0.1.4`). The workflow then attaches the installer and checksum to a GitHub Release automatically.
+Open **Actions → Build Windows installer → Run workflow** to create a downloadable workflow artifact for testing. Workflow artifacts are temporary and may require signing in to GitHub. To publish a permanent public download directly from the GitHub UI, open **Actions → Build Windows installer → Run workflow**, enable **Publish the installer to the public GitHub Releases page**, and keep or edit the release tag (for example, `v0.1.4`). The workflow creates the tag if needed and attaches the installer and checksum to a GitHub Release. Pushing a version tag beginning with `v` also publishes a release automatically.
 
 > The Windows installer must be built and smoke-tested on Windows. Unit tests passing on another operating system do not prove that the installer works on Windows 10/11. Test installation, first launch, Ollama connectivity, upgrade, and uninstall before publishing a public release.
 
