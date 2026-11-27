@@ -11,6 +11,7 @@ on:
     branches:
       - main
   workflow_dispatch:
+
 permissions:
   contents: read
 
@@ -42,9 +43,9 @@ jobs:
         run: |
           choco install innosetup --yes --no-progress --force
           $candidates = @(
-            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-            "${env:ProgramFiles}\Inno Setup 6\ISCC.exe",
-            "C:\ProgramData\chocolatey\lib\innosetup\tools\ISCC.exe"
+            "${env:ProgramFiles(x86)}\\Inno Setup 6\\ISCC.exe",
+            "${env:ProgramFiles}\\Inno Setup 6\\ISCC.exe",
+            "C:\\ProgramData\\chocolatey\\lib\\innosetup\\tools\\ISCC.exe"
           )
           $compiler = $null
           foreach ($candidate in $candidates) {
@@ -54,7 +55,7 @@ jobs:
             }
           }
           if (-not $compiler) {
-            $roots = @("${env:ProgramFiles(x86)}", "${env:ProgramFiles}", "C:\ProgramData\chocolatey\lib\innosetup")
+            $roots = @("${env:ProgramFiles(x86)}", "${env:ProgramFiles}", "C:\\ProgramData\\chocolatey\\lib\\innosetup")
             $compiler = Get-ChildItem -Path $roots -Filter ISCC.exe -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
           }
           if (-not $compiler) {
@@ -67,7 +68,7 @@ jobs:
         env:
           DOCUMIND_SIGNING_CERT_BASE64: ${{ secrets.DOCUMIND_SIGNING_CERT_BASE64 }}
           DOCUMIND_SIGNING_CERT_PASSWORD: ${{ secrets.DOCUMIND_SIGNING_CERT_PASSWORD }}
-        run: .\build_windows.bat
+        run: .\\build_windows.bat
 
       - name: Generate SHA-256 checksum
         shell: pwsh
@@ -86,3 +87,15 @@ jobs:
             installer/output/DocuMindAI-Setup-0.1.4.exe
             installer/output/SHA256SUMS.txt
           if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: DocuMind AI ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            installer/output/DocuMindAI-Setup-0.1.4.exe
+            installer/output/SHA256SUMS.txt
