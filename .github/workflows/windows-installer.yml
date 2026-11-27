@@ -11,6 +11,17 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Publish the installer to the public GitHub Releases page"
+        required: true
+        type: boolean
+        default: false
+      release_tag:
+        description: "Release tag (for example v0.1.4)"
+        required: true
+        type: string
+        default: "v0.1.4"
 
 permissions:
   contents: read
@@ -91,7 +102,7 @@ jobs:
 
 
   publish-release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
     needs: build-windows
     runs-on: ubuntu-latest
     permissions:
@@ -106,7 +117,9 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: DocuMind AI ${{ github.ref_name }}
+          name: DocuMind AI ${{ inputs.release_tag || github.ref_name }}
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
