@@ -170,9 +170,13 @@ python -m pip install -r requirements.txt -r requirements-build.txt
 
 PyInstaller writes the application bundle to `dist\DocuMindAI`; Inno Setup writes the setup executable to `installer\output`.
 
+### Download a ready-to-install Windows build
+
+After a version tag is published and the Windows workflow succeeds, open the repository's [Releases page](https://github.com/RaminKhosravii/DocuMind-AI/releases/latest) and download `DocuMindAI-Setup-0.1.4.exe`. Run the installer; Python and VS Code are not required on the target PC. Review the release notes and verify the SHA-256 checksum using the accompanying `SHA256SUMS.txt` file.
+
 ### Build using GitHub Actions
 
-Open **Actions → Build Windows installer → Run workflow**. The workflow runs the unit tests, builds the Windows application and uploads the installer as an artifact. Creating and pushing a version tag such as `v0.1.0` also triggers the workflow.
+Open **Actions → Build Windows installer → Run workflow** to create a downloadable workflow artifact for testing. Workflow artifacts are temporary and may require signing in to GitHub. To publish a permanent public download, push a version tag beginning with `v` (for example, `v0.1.4`). The workflow then attaches the installer and checksum to a GitHub Release automatically.
 
 > The Windows installer must be built and smoke-tested on Windows. Unit tests passing on another operating system do not prove that the installer works on Windows 10/11. Test installation, first launch, Ollama connectivity, upgrade, and uninstall before publishing a public release.
 
