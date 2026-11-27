@@ -1,0 +1,127 @@
+name: Build Windows installer
+
+on:
+  push:
+    branches:
+      - feature/windows-desktop-installer
+      - security/windows-local-hardening
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Publish the installer to the public GitHub Releases page"
+        required: true
+        type: boolean
+        default: false
+      release_tag:
+        description: "Release tag (for example v0.1.4)"
+        required: true
+        type: string
+        default: "v0.1.4"
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-build.txt
+
+      - name: Run tests
+        run: |
+          python -m unittest discover -s tests -v
+          python -m compileall -q app.py ai_engine.py database.py file_processor.py desktop_launcher.py security.py
+
+      - name: Install and locate Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --yes --no-progress --force
+          $candidates = @(
+            "${env:ProgramFiles(x86)}\\Inno Setup 6\\ISCC.exe",
+            "${env:ProgramFiles}\\Inno Setup 6\\ISCC.exe",
+            "C:\\ProgramData\\chocolatey\\lib\\innosetup\\tools\\ISCC.exe"
+          )
+          $compiler = $null
+          foreach ($candidate in $candidates) {
+            if (Test-Path $candidate) {
+              $compiler = Get-Item $candidate
+              break
+            }
+          }
+          if (-not $compiler) {
+            $roots = @("${env:ProgramFiles(x86)}", "${env:ProgramFiles}", "C:\\ProgramData\\chocolatey\\lib\\innosetup")
+            $compiler = Get-ChildItem -Path $roots -Filter ISCC.exe -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          }
+          if (-not $compiler) {
+            throw "ISCC.exe was not found after installing Inno Setup."
+          }
+          "INNO_SETUP_COMPILER=$($compiler.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Using Inno Setup compiler: $($compiler.FullName)"
+
+      - name: Build desktop application and installer
+        env:
+          DOCUMIND_SIGNING_CERT_BASE64: ${{ secrets.DOCUMIND_SIGNING_CERT_BASE64 }}
+          DOCUMIND_SIGNING_CERT_PASSWORD: ${{ secrets.DOCUMIND_SIGNING_CERT_PASSWORD }}
+        run: .\\build_windows.bat
+
+      - name: Generate SHA-256 checksum
+        shell: pwsh
+        run: |
+          $installer = "installer/output/DocuMindAI-Setup-0.1.4.exe"
+          if (-not (Test-Path $installer)) { throw "Installer output is missing." }
+          $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  DocuMindAI-Setup-0.1.4.exe" | Out-File "installer/output/SHA256SUMS.txt" -Encoding ascii
+          Write-Host "Installer SHA-256: $hash"
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DocuMindAI-Windows-Installer-0.1.4
+          path: |
+            installer/output/DocuMindAI-Setup-0.1.4.exe
+            installer/output/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+
+  publish-release:
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
+    needs: build-windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DocuMindAI-Windows-Installer-0.1.4
+          path: installer/output
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: DocuMind AI ${{ inputs.release_tag || github.ref_name }}
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            installer/output/DocuMindAI-Setup-0.1.4.exe
+            installer/output/SHA256SUMS.txt

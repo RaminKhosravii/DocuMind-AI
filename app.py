@@ -3,6 +3,8 @@ import streamlit as st
 from pathlib import Path
 import base64
 
+from security import sanitize_filename, validate_upload
+
 from file_processor import extract_text, get_file_type
 from ai_engine import (
     CHAT_MODEL,
@@ -22,14 +24,15 @@ from database import (
     search_documents,
 )
 
+BASE_DIR = Path(__file__).resolve().parent
+APP_ICON = BASE_DIR / "assets" / "documind.png"
+
 st.set_page_config(
     page_title="DocuMind AI",
-    page_icon="🧠",
+    page_icon=str(APP_ICON) if APP_ICON.is_file() else "🧠",
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-BASE_DIR = Path(__file__).resolve().parent
 
 regular_font = BASE_DIR / "assets" / "fonts" / "Vazirmatn-Regular.woff2"
 bold_font = BASE_DIR / "assets" / "fonts" / "Vazirmatn-Bold.woff2"
@@ -190,7 +193,7 @@ def show_auth_page():
                 key="register_username",
             )
             new_password = st.text_input(
-                "رمز عبور جدید (حداقل ۸ کاراکتر)",
+                "رمز عبور جدید (حداقل ۱۲ کاراکتر)",
                 type="password",
                 key="register_password",
             )
@@ -237,6 +240,7 @@ def show_library(user_id):
         "فایل‌های موردنظرت را انتخاب کن",
         type=None,
         accept_multiple_files=True,
+        max_upload_size=25,
         key=f"uploader_{st.session_state.uploader_nonce}",
     )
 
@@ -254,7 +258,7 @@ def show_library(user_id):
             for uploaded_file in uploaded_files:
                 try:
                     file_bytes = uploaded_file.getvalue()
-                    file_name = uploaded_file.name
+                    file_name, file_size = validate_upload(uploaded_file.name, file_bytes)
 
                     try:
                         content, page_count = extract_text(file_name, file_bytes)
@@ -270,7 +274,7 @@ def show_library(user_id):
                         user_id=user_id,
                         file_data=file_bytes,
                         file_type=get_file_type(file_name),
-                        file_size=len(file_bytes),
+                        file_size=file_size,
                     )
                     saved_count += 1
 

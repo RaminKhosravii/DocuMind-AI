@@ -133,9 +133,52 @@ DocuMind-AI/
 ## Privacy and security
 
 - Do not commit databases, uploaded documents, credentials, API keys, or personal information.
-- Local model inference does not require sending document content to a hosted AI API in the current setup.
-- Keep your local database and backups outside version control.
+- Document text and original file bytes are encrypted at rest with AES-256-GCM; on Windows, the encryption key is protected with the current Windows user's DPAPI.
+- Passwords use salted PBKDF2-HMAC-SHA256 hashes and repeated failed logins trigger a temporary lockout.
+- Keep the database and `master.key.dpapi` together in `%LOCALAPPDATA%\\DocuMind AI\\data`; a backup missing the key cannot be restored.
+- Local encryption does not protect against malware or an attacker already running as the same Windows user. Use Windows sign-in protection and BitLocker where available.
+- Ollama communication is restricted to loopback (`127.0.0.1`) and bypasses inherited system proxy settings.
 - If sensitive data was ever committed to a public repository, deleting the file in a later commit does **not** remove it from Git history. Treat it as exposed and follow GitHub's guidance for sensitive data removal.
+
+
+## Windows desktop installer
+
+DocuMind AI includes a Windows desktop packaging target. The installed program opens in its own application window using Microsoft Edge WebView2; users do not need to open a browser manually. The setup package includes the Python application and its runtime libraries. On first launch, a guided setup checks for Ollama, downloads and verifies the official Ollama Windows installer if needed, installs it for the current user, starts its local API, and downloads the required `qwen3:1.7b` and `nomic-embed-text` models with progress feedback. Python and VS Code are not required on the target PC.
+
+### Requirements on the target PC
+
+- Windows 10 version 22H2 or Windows 11, 64-bit (Ollama's current Windows requirement).
+- Microsoft Edge WebView2 Runtime (install the Evergreen Runtime if it is missing).
+- [Ollama for Windows](https://ollama.com/download/windows).
+- Run these commands once after installing Ollama:
+
+  ```powershell
+  ollama pull qwen3:1.7b
+  ollama pull nomic-embed-text
+  ```
+
+The installer creates a Start menu shortcut and optionally a desktop shortcut. The local database is stored in `%LOCALAPPDATA%\DocuMind AI\data`, outside Program Files, so it remains writable for standard Windows users and is preserved when the application is upgraded.
+
+### Build the installer
+
+Build on Windows 10/11 x64 with Python 3.11 and Inno Setup 6 installed:
+
+```powershell
+python -m pip install -r requirements.txt -r requirements-build.txt
+.\build_windows.bat
+```
+
+PyInstaller writes the application bundle to `dist\DocuMindAI`; Inno Setup writes the setup executable to `installer\output`.
+
+### Download a ready-to-install Windows build
+
+After a version tag is published and the Windows workflow succeeds, open the repository's [Releases page](https://github.com/RaminKhosravii/DocuMind-AI/releases/latest) and download `DocuMindAI-Setup-0.1.4.exe`. Run the installer; Python and VS Code are not required on the target PC. Review the release notes and verify the SHA-256 checksum using the accompanying `SHA256SUMS.txt` file.
+
+### Build using GitHub Actions
+
+Open **Actions → Build Windows installer → Run workflow** to create a downloadable workflow artifact for testing. Workflow artifacts are temporary and may require signing in to GitHub. To publish a permanent public download directly from the GitHub UI, open **Actions → Build Windows installer → Run workflow**, enable **Publish the installer to the public GitHub Releases page**, and keep or edit the release tag (for example, `v0.1.4`). The workflow creates the tag if needed and attaches the installer and checksum to a GitHub Release. Pushing a version tag beginning with `v` also publishes a release automatically.
+
+> The Windows installer must be built and smoke-tested on Windows. Unit tests passing on another operating system do not prove that the installer works on Windows 10/11. Test installation, first launch, Ollama connectivity, upgrade, and uninstall before publishing a public release.
 
 ## Roadmap
 

@@ -1,0 +1,4 @@
+# Build-only dependencies. Runtime dependencies stay in requirements.txt.
+pyinstaller>=6.10,<7
+pywebview>=5.0,<7
+Pillow>=10,<13
